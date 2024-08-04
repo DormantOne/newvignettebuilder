@@ -64,13 +64,13 @@
             decryptedApiKey = decryptedKeyBytes.toString(CryptoJS.enc.Utf8);
             
             if (decryptedApiKey) {
-                generateJsonWithOpenAI(decryptedApiKey);
+                generateJsonWithOpenAI(decryptedApiKey, 0);
             } else {
                 alert("Incorrect password.");
             }
         }
         
-        async function generateJsonWithOpenAI(apiKey) {
+        async function generateJsonWithOpenAI(apiKey, attempt) {
             const text = vignetteJSON.events[0].event;
             const prompt = `Create a JSON structure for the following vignette:\n\n${text}`;
             
@@ -98,22 +98,33 @@
                 try {
                     vignetteJSON = JSON.parse(responseText);
                     document.getElementById('jsonOutput').textContent = JSON.stringify(vignetteJSON, null, 2);
+                    document.getElementById('password-container').classList.add('hidden');
+                    document.getElementById('json-container').classList.remove('hidden');
                 } catch (e) {
                     console.error('Error parsing JSON response:', e);
-                    alert('The response from the AI could not be parsed as JSON.');
+                    if (attempt < 3) {
+                        console.log(`Retrying... Attempt ${attempt + 1}`);
+                        generateJsonWithOpenAI(apiKey, attempt + 1);
+                    } else {
+                        alert('The response from the AI could not be parsed as JSON after multiple attempts.');
+                    }
                 }
-
-                document.getElementById('password-container').classList.add('hidden');
-                document.getElementById('json-container').classList.remove('hidden');
             } catch (error) {
                 console.error('Error:', error);
+                if (attempt < 3) {
+                    console.log(`Retrying... Attempt ${attempt + 1}`);
+                    generateJsonWithOpenAI(apiKey, attempt + 1);
+                } else {
+                    alert('Failed to generate JSON after multiple attempts.');
+                }
             }
         }
         
         function startVignette() {
             document.getElementById('json-container').classList.add('hidden');
             document.getElementById('vignette-container').classList.remove('hidden');
-            document.getElementById('vignette-text').innerHTML = vignetteJSON.events[0].event;
+            const initialEvent = vignetteJSON.events[0] ? vignetteJSON.events[0].event : "Starting the vignette...";
+            document.getElementById('vignette-text').innerHTML = `<strong>AI:</strong> ${initialEvent}`;
         }
         
         function submitResponse() {

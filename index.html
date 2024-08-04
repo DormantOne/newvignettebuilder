@@ -125,7 +125,7 @@
         function startVignette() {
             document.getElementById('json-container').classList.add('hidden');
             document.getElementById('vignette-container').classList.remove('hidden');
-            const initialEvent = vignetteJSON.events[0] ? vignetteJSON.events[0].event : "Starting the vignette...";
+            const initialEvent = vignetteJSON.events.length > 0 ? vignetteJSON.events[0].event : "Starting the vignette...";
             document.getElementById('vignette-text').innerHTML = `<strong>AI:</strong> ${initialEvent}`;
         }
         

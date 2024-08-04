@@ -43,8 +43,8 @@
     
     <script>
         let vignetteJSON = {
+            main: "",
             events: [],
-            dependencies: [],
             outcomes: []
         };
         const encryptedApiKey = "U2FsdGVkX18tjJqgGvHJxbN/7ZbxOV0RKpgWlaHk8c7ajA3LMb6/I9/EcERfK68Uj44MnlHQvnMsrqi23pr7bAJLzdcQ0nXs1QVV7hxv//mNuhKsC2+vX3WQGeeh6jw3DUKFxa7CxpKunx+SoJz6fw==";
@@ -52,7 +52,7 @@
         
         function submitVignette() {
             const vignette = document.getElementById('vignetteInput').value;
-            vignetteJSON.events.push({ event: vignette });
+            vignetteJSON.main = vignette;
             document.getElementById('creation-container').classList.add('hidden');
             document.getElementById('password-container').classList.remove('hidden');
         }
@@ -71,10 +71,10 @@
         }
         
         async function generateJsonWithOpenAI(apiKey, attempt, previousResponse = "", error = "") {
-            const text = vignetteJSON.events[0].event;
+            const text = vignetteJSON.main;
             const prompt = attempt === 0 
-                ? `Create a valid JSON structure for the following vignette. Ensure the response is only valid JSON and nothing else:\n\n${text}`
-                : `The previous JSON response was invalid. Here is the response:\n\n${previousResponse}\n\nError: ${error}\n\nPlease provide a corrected and valid JSON structure.`;
+                ? `Create a simple JSON structure for the following vignette. Ensure the response is only valid JSON and nothing else. Use the following format: {"main": "text", "events": ["event1", "event2"], "outcomes": ["outcome1", "outcome2"]}\n\nVignette:\n\n${text}`
+                : `The previous JSON response was invalid. Here is the response:\n\n${previousResponse}\n\nError: ${error}\n\nPlease provide a corrected and valid JSON structure using the following format: {"main": "text", "events": ["event1", "event2"], "outcomes": ["outcome1", "outcome2"]}`;
             
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -125,14 +125,14 @@
         function startVignette() {
             document.getElementById('json-container').classList.add('hidden');
             document.getElementById('vignette-container').classList.remove('hidden');
-            const initialEvent = vignetteJSON.events.length > 0 ? vignetteJSON.events[0].event : "Starting the vignette...";
+            const initialEvent = vignetteJSON.main ? vignetteJSON.main : "Starting the vignette...";
             document.getElementById('vignette-text').innerHTML = `<strong>AI:</strong> ${initialEvent}`;
         }
         
         function submitResponse() {
             const userInput = document.getElementById('userInput').value;
             if (userInput.trim()) {
-                vignetteJSON.events.push({ event: userInput });
+                vignetteJSON.events.push(userInput);
                 updateVignetteText(`<strong>User:</strong> ${userInput}`);
                 generateNextStep();
                 document.getElementById('userInput').value = '';
@@ -145,7 +145,7 @@
         }
         
         async function generateNextStep() {
-            const prompt = `Given the following events:\n\n${vignetteJSON.events.map(e => e.event).join('\n')}\n\nWhat should be the next steps or considerations?`;
+            const prompt = `Given the following events:\n\n${vignetteJSON.events.join('\n')}\n\nWhat should be the next steps or considerations?`;
             
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {

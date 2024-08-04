@@ -17,10 +17,7 @@
     
     <div id="creation-container">
         <h2>Create Vignette</h2>
-        <label for="initialPresentation">Initial Presentation:</label>
-        <textarea id="initialPresentation" rows="5" placeholder="Enter the initial presentation..."></textarea>
-        <label for="underlyingCondition">Underlying Condition and General Direction:</label>
-        <textarea id="underlyingCondition" rows="5" placeholder="Enter the underlying condition and general direction..."></textarea>
+        <textarea id="vignetteInput" rows="10" placeholder="Enter your vignette here..."></textarea>
         <button onclick="submitVignette()">Submit Vignette</button>
     </div>
     
@@ -32,10 +29,10 @@
     
     <div id="json-container" class="hidden">
         <h2>Edit Vignette Details</h2>
-        <div id="initialVignette"></div>
-        <div id="underlyingVignette"></div>
-        <label for="mainText">Starting Vignette:</label>
-        <textarea id="mainText" rows="3"></textarea>
+        <label>Initial Presentation:</label>
+        <textarea id="initialPresentation" rows="3"></textarea>
+        <label>Underlying Condition and General Direction:</label>
+        <textarea id="underlyingCondition" rows="3"></textarea>
         <div id="ifThenContainer"></div>
         <button onclick="addIfThen()">Add IF... THEN</button>
         <button onclick="startVignette()">Start Vignette</button>
@@ -61,12 +58,10 @@
         let decryptedApiKey = null;
 
         function submitVignette() {
-            const initialPresentation = document.getElementById('initialPresentation').value;
-            const underlyingCondition = document.getElementById('underlyingCondition').value;
-            vignetteJSON.initialPresentation = initialPresentation;
-            vignetteJSON.underlyingCondition = underlyingCondition;
-            document.getElementById('initialVignette').innerText = initialPresentation;
-            document.getElementById('underlyingVignette').innerText = underlyingCondition;
+            const vignette = document.getElementById('vignetteInput').value;
+            vignetteJSON.initialPresentation = "";
+            vignetteJSON.underlyingCondition = "";
+            vignetteJSON.ifThenStatements = [];
             document.getElementById('creation-container').classList.add('hidden');
             document.getElementById('password-container').classList.remove('hidden');
         }
@@ -85,10 +80,10 @@
         }
         
         async function generateJsonWithOpenAI(apiKey, attempt, previousResponse = "", error = "") {
-            const text = vignetteJSON.initialPresentation + '\n' + vignetteJSON.underlyingCondition;
+            const text = document.getElementById('vignetteInput').value;
             const prompt = attempt === 0 
-                ? `Break down the following vignette into a JSON structure with an initial starting vignette and multiple "IF... THEN" statements. Ensure the response is only valid JSON and nothing else. Use the following format: {"initialPresentation": "text", "underlyingCondition": "text", "ifThenStatements": [{"if": "condition", "then": "result"}, {"if": "another condition", "then": "another result"}]}\n\nVignette:\n\n${text}`
-                : `The previous JSON response was invalid. Here is the response:\n\n${previousResponse}\n\nError: ${error}\n\nPlease provide a corrected and valid JSON structure using the following format: {"initialPresentation": "text", "underlyingCondition": "text", "ifThenStatements": [{"if": "condition", "then": "result"}, {"if": "another condition", "then": "another result"}]}`;
+                ? `Break down the following vignette into a JSON structure with an initial presentation, underlying condition and general direction, and one "IF... THEN" statement. Ensure the response is only valid JSON and nothing else. Use the following format: {"initialPresentation": "text", "underlyingCondition": "text", "ifThenStatements": [{"if": "condition", "then": "result"}]}\n\nVignette:\n\n${text}`
+                : `The previous JSON response was invalid. Here is the response:\n\n${previousResponse}\n\nError: ${error}\n\nPlease provide a corrected and valid JSON structure using the following format: {"initialPresentation": "text", "underlyingCondition": "text", "ifThenStatements": [{"if": "condition", "then": "result"}]}`;
             
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -113,7 +108,8 @@
                 // Attempt to parse the response as JSON
                 try {
                     vignetteJSON = JSON.parse(responseText);
-                    document.getElementById('mainText').value = vignetteJSON.initialPresentation;
+                    document.getElementById('initialPresentation').value = vignetteJSON.initialPresentation;
+                    document.getElementById('underlyingCondition').value = vignetteJSON.underlyingCondition;
                     vignetteJSON.ifThenStatements.forEach((statement, index) => {
                         addIfThen(statement.if, statement.then, index === 0);
                     });
@@ -158,8 +154,8 @@
 
         function startVignette() {
             // Update vignetteJSON with edited values
-            vignetteJSON.initialPresentation = document.getElementById('mainText').value;
-            vignetteJSON.underlyingCondition = document.getElementById('underlyingVignette').innerText;
+            vignetteJSON.initialPresentation = document.getElementById('initialPresentation').value;
+            vignetteJSON.underlyingCondition = document.getElementById('underlyingCondition').value;
             vignetteJSON.ifThenStatements = Array.from(document.getElementsByClassName('if-then-box')).map(box => ({
                 if: box.getElementsByClassName('if-text')[0].value,
                 then: box.getElementsByClassName('then-text')[0].value

@@ -181,7 +181,7 @@
         async function generateNextStep() {
             const conversationHistory = vignetteJSON.conversation.map(entry => `${entry.role}: ${entry.content}`).join('\n');
             const ifThenStatements = vignetteJSON.ifThenStatements.map(statement => `IF ${statement.if} THEN ${statement.then}`).join('\n');
-            const prompt = `Given the following conversation and IF... THEN statements, choose the best fit and provide a succinct response that makes sense and extends the vignette. If there is no matching IF... THEN statement, consider a reasonable possibility. Provide a succinct response (a few words only):\n\nConversation:\n${conversationHistory}\n\nIF... THEN Statements:\n${ifThenStatements}`;
+            const prompt = `Given the following conversation and IF... THEN statements, choose the best fit and provide a response that makes sense and logically extends the vignette. Ensure the response is based on the conversation context and provide the next logical step. If there is no matching IF... THEN statement, consider a reasonable possibility.\n\nConversation:\n${conversationHistory}\n\nIF... THEN Statements:\n${ifThenStatements}`;
             
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {

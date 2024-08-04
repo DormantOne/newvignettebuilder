@@ -70,9 +70,11 @@
             }
         }
         
-        async function generateJsonWithOpenAI(apiKey, attempt) {
+        async function generateJsonWithOpenAI(apiKey, attempt, previousResponse = "") {
             const text = vignetteJSON.events[0].event;
-            const prompt = `Create a JSON structure for the following vignette:\n\n${text}`;
+            const prompt = attempt === 0 
+                ? `Create a JSON structure for the following vignette:\n\n${text}`
+                : `The previous JSON response was invalid. Here is the response:\n\n${previousResponse}\n\nError: ${attempt.error}\n\nPlease correct the JSON structure.`;
             
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -104,7 +106,7 @@
                     console.error('Error parsing JSON response:', e);
                     if (attempt < 3) {
                         console.log(`Retrying... Attempt ${attempt + 1}`);
-                        generateJsonWithOpenAI(apiKey, attempt + 1);
+                        generateJsonWithOpenAI(apiKey, attempt + 1, { response: responseText, error: e.message });
                     } else {
                         alert('The response from the AI could not be parsed as JSON after multiple attempts.');
                     }
@@ -113,7 +115,7 @@
                 console.error('Error:', error);
                 if (attempt < 3) {
                     console.log(`Retrying... Attempt ${attempt + 1}`);
-                    generateJsonWithOpenAI(apiKey, attempt + 1);
+                    generateJsonWithOpenAI(apiKey, attempt + 1, { response: previousResponse, error: error.message });
                 } else {
                     alert('Failed to generate JSON after multiple attempts.');
                 }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vignette Builder with Encrypted Key</title>
+    <title>Vignette Builder with Encrypted API Key</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; }
@@ -19,19 +19,19 @@
     </div>
 
     <div id="password-container" style="display:none;">
-        <h2>Set Password to Encrypt Key</h2>
+        <h2>Decrypt API Key</h2>
         <input type="password" id="password" placeholder="Enter password">
-        <button onclick="encryptKey()">Encrypt and Store Key</button>
+        <button onclick="decryptApiKey()">Decrypt API Key and Generate JSON</button>
     </div>
 
     <div id="json-container" style="display:none;">
-        <h2>Encrypted JSON</h2>
+        <h2>Generated JSON</h2>
         <pre id="jsonOutput"></pre>
-        <button onclick="decryptKey()">Decrypt Key</button>
     </div>
 
     <script>
         let vignetteJSON = {};
+        const encryptedApiKey = "R2yh3srL8RXzelsQrF/CL81sbz5/rmp89ohfzKhIzl9lu/g+zYqsWYsuS6aiDOyLJY2qVbD06ZQ8iVgTm5Qc64JGvXDsfE9Id+olEiJpkTEONA8=";  // Replace this with your actual encrypted API key
 
         function convertToJSON() {
             const vignette = document.getElementById('vignetteInput').value;
@@ -44,28 +44,42 @@
             document.getElementById('password-container').style.display = 'block';
         }
 
-        function encryptKey() {
+        function decryptApiKey() {
             const password = document.getElementById('password').value;
             const key = CryptoJS.SHA256(password).toString(CryptoJS.enc.Hex).slice(0, 32);
-            const encryptedKey = CryptoJS.AES.encrypt(key, key).toString();
-            localStorage.setItem('encryptedKey', encryptedKey);
-            localStorage.setItem('vignetteJSON', JSON.stringify(vignetteJSON));
-            document.getElementById('jsonOutput').textContent = JSON.stringify(vignetteJSON, null, 2);
-            document.getElementById('json-container').style.display = 'block';
-        }
+            const decryptedKey = CryptoJS.AES.decrypt(encryptedApiKey, key).toString(CryptoJS.enc.Utf8);
 
-        function decryptKey() {
-            const password = prompt("Enter password to decrypt key:");
-            const key = CryptoJS.SHA256(password).toString(CryptoJS.enc.Hex).slice(0, 32);
-            const encryptedKey = localStorage.getItem('encryptedKey');
-            const decryptedKey = CryptoJS.AES.decrypt(encryptedKey, key).toString(CryptoJS.enc.Utf8);
-
-            if (decryptedKey === key) {
-                const storedJSON = localStorage.getItem('vignetteJSON');
-                document.getElementById('jsonOutput').textContent = storedJSON;
-                alert("Key decrypted successfully!");
+            if (decryptedKey) {
+                generateJsonWithOpenAI(decryptedKey);
             } else {
                 alert("Incorrect password.");
+            }
+        }
+
+        async function generateJsonWithOpenAI(apiKey) {
+            const text = vignetteJSON.main;
+            const prompt = `Create a JSON structure for the following vignette:\n\n${text}`;
+            
+            try {
+                const response = await fetch('https://api.openai.com/v1/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'text-davinci-003',
+                        prompt: prompt,
+                        max_tokens: 1000
+                    })
+                });
+                
+                const data = await response.json();
+                const jsonResponse = JSON.parse(data.choices[0].text.trim());
+                document.getElementById('jsonOutput').textContent = JSON.stringify(jsonResponse, null, 2);
+                document.getElementById('json-container').style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
             }
         }
     </script>

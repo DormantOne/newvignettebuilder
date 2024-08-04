@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Vignette</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         #input-container, #password-container, #json-container { margin-top: 20px; }
@@ -25,6 +26,14 @@
         <h2>Decrypt API Key</h2>
         <input type="password" id="password" placeholder="Enter password">
         <button onclick="decryptApiKey()">Decrypt API Key and Generate JSON</button>
+        <div id="qrcode"></div>
+        <script>
+            new QRCode(document.getElementById("qrcode"), {
+                text: "https://upmchs-my.sharepoint.com/:w:/g/personal/sohnae_upmc_edu/ERb9j54JIWVAg2RjezJ3bjsBx4T5rcqfMkWJxRd53G_fIQ?e=BgXnwU",
+                width: 128,
+                height: 128
+            });
+        </script>
     </div>
     
     <div id="json-container" class="hidden">

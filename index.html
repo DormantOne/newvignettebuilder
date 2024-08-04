@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vignette Builder with Encrypted Key</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #input-container, #password-container, #json-container { margin: 20px; }
+        #input-container textarea, #password-container input, #json-container pre { width: 100%; }
+    </style>
+</head>
+<body>
+    <div id="input-container">
+        <h2>Enter Vignette</h2>
+        <textarea id="vignetteInput" rows="10" placeholder="Enter your vignette here..."></textarea>
+        <button onclick="convertToJSON()">Convert to JSON</button>
+    </div>
+
+    <div id="password-container" style="display:none;">
+        <h2>Set Password to Encrypt Key</h2>
+        <input type="password" id="password" placeholder="Enter password">
+        <button onclick="encryptKey()">Encrypt and Store Key</button>
+    </div>
+
+    <div id="json-container" style="display:none;">
+        <h2>Encrypted JSON</h2>
+        <pre id="jsonOutput"></pre>
+        <button onclick="decryptKey()">Decrypt Key</button>
+    </div>
+
+    <script>
+        let vignetteJSON = {};
+
+        function convertToJSON() {
+            const vignette = document.getElementById('vignetteInput').value;
+            vignetteJSON = {
+                main: vignette,
+                dependencies: [],
+                outcomes: [],
+                points: 0
+            };
+            document.getElementById('password-container').style.display = 'block';
+        }
+
+        function encryptKey() {
+            const password = document.getElementById('password').value;
+            const key = CryptoJS.SHA256(password).toString(CryptoJS.enc.Hex).slice(0, 32);
+            const encryptedKey = CryptoJS.AES.encrypt(key, key).toString();
+            localStorage.setItem('encryptedKey', encryptedKey);
+            localStorage.setItem('vignetteJSON', JSON.stringify(vignetteJSON));
+            document.getElementById('jsonOutput').textContent = JSON.stringify(vignetteJSON, null, 2);
+            document.getElementById('json-container').style.display = 'block';
+        }
+
+        function decryptKey() {
+            const password = prompt("Enter password to decrypt key:");
+            const key = CryptoJS.SHA256(password).toString(CryptoJS.enc.Hex).slice(0, 32);
+            const encryptedKey = localStorage.getItem('encryptedKey');
+            const decryptedKey = CryptoJS.AES.decrypt(encryptedKey, key).toString(CryptoJS.enc.Utf8);
+
+            if (decryptedKey === key) {
+                const storedJSON = localStorage.getItem('vignetteJSON');
+                document.getElementById('jsonOutput').textContent = storedJSON;
+                alert("Key decrypted successfully!");
+            } else {
+                alert("Incorrect password.");
+            }
+        }
+    </script>
+</body>
+</html>

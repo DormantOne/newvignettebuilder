@@ -29,14 +29,12 @@
     
     <div id="json-container" class="hidden">
         <h2>Edit Vignette Details</h2>
-        <label for="mainText">Start of Vignette:</label>
+        <label for="mainText">Main Presentation:</label>
         <textarea id="mainText" rows="3"></textarea>
-        <label for="eventsText">Consequences/Results/Findings:</label>
-        <textarea id="eventsText" rows="3"></textarea>
+        <label for="consequencesText">Consequences/Results/Uncovered Data:</label>
+        <textarea id="consequencesText" rows="5"></textarea>
         <label for="dependenciesText">Dependencies:</label>
-        <textarea id="dependenciesText" rows="3"></textarea>
-        <label for="outcomesText">Outcomes:</label>
-        <textarea id="outcomesText" rows="3"></textarea>
+        <textarea id="dependenciesText" rows="5"></textarea>
         <button onclick="startVignette()">Start Vignette</button>
     </div>
     
@@ -51,9 +49,8 @@
     <script>
         let vignetteJSON = {
             main: "",
-            events: [],
-            dependencies: [],
-            outcomes: []
+            consequences: [],
+            dependencies: []
         };
         const encryptedApiKey = "U2FsdGVkX18tjJqgGvHJxbN/7ZbxOV0RKpgWlaHk8c7ajA3LMb6/I9/EcERfK68Uj44MnlHQvnMsrqi23pr7bAJLzdcQ0nXs1QVV7hxv//mNuhKsC2+vX3WQGeeh6jw3DUKFxa7CxpKunx+SoJz6fw==";
         let decryptedApiKey = null;
@@ -81,8 +78,8 @@
         async function generateJsonWithOpenAI(apiKey, attempt, previousResponse = "", error = "") {
             const text = vignetteJSON.main;
             const prompt = attempt === 0 
-                ? `Create a simple JSON structure for the following vignette. Ensure the response is only valid JSON and nothing else. Use the following format: {"main": "text", "events": ["event1", "event2"], "dependencies": ["dependency1", "dependency2"], "outcomes": ["outcome1", "outcome2"]}\n\nVignette:\n\n${text}`
-                : `The previous JSON response was invalid. Here is the response:\n\n${previousResponse}\n\nError: ${error}\n\nPlease provide a corrected and valid JSON structure using the following format: {"main": "text", "events": ["event1", "event2"], "dependencies": ["dependency1", "dependency2"], "outcomes": ["outcome1", "outcome2"]}`;
+                ? `Break down the following vignette into a JSON structure with three parts: main presentation, consequences/results/uncovered data, and dependencies. Ensure the response is only valid JSON and nothing else. Use the following format: {"main": "text", "consequences": ["consequence1", "consequence2"], "dependencies": ["dependency1", "dependency2"]}\n\nVignette:\n\n${text}`
+                : `The previous JSON response was invalid. Here is the response:\n\n${previousResponse}\n\nError: ${error}\n\nPlease provide a corrected and valid JSON structure using the following format: {"main": "text", "consequences": ["consequence1", "consequence2"], "dependencies": ["dependency1", "dependency2"]}`;
             
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -108,9 +105,8 @@
                 try {
                     vignetteJSON = JSON.parse(responseText);
                     document.getElementById('mainText').value = vignetteJSON.main;
-                    document.getElementById('eventsText').value = vignetteJSON.events.join('\n');
+                    document.getElementById('consequencesText').value = vignetteJSON.consequences.join('\n');
                     document.getElementById('dependenciesText').value = vignetteJSON.dependencies.join('\n');
-                    document.getElementById('outcomesText').value = vignetteJSON.outcomes.join('\n');
                     document.getElementById('password-container').classList.add('hidden');
                     document.getElementById('json-container').classList.remove('hidden');
                 } catch (e) {
@@ -136,9 +132,8 @@
         function startVignette() {
             // Update vignetteJSON with edited values
             vignetteJSON.main = document.getElementById('mainText').value;
-            vignetteJSON.events = document.getElementById('eventsText').value.split('\n').filter(Boolean);
+            vignetteJSON.consequences = document.getElementById('consequencesText').value.split('\n').filter(Boolean);
             vignetteJSON.dependencies = document.getElementById('dependenciesText').value.split('\n').filter(Boolean);
-            vignetteJSON.outcomes = document.getElementById('outcomesText').value.split('\n').filter(Boolean);
             
             document.getElementById('json-container').classList.add('hidden');
             document.getElementById('vignette-container').classList.remove('hidden');
@@ -149,7 +144,7 @@
         function submitResponse() {
             const userInput = document.getElementById('userInput').value;
             if (userInput.trim()) {
-                vignetteJSON.events.push(userInput);
+                vignetteJSON.consequences.push(userInput);
                 updateVignetteText(`<strong>User:</strong> ${userInput}`);
                 generateNextStep();
                 document.getElementById('userInput').value = '';
@@ -162,7 +157,7 @@
         }
         
         async function generateNextStep() {
-            const prompt = `Given the following events:\n\n${vignetteJSON.events.join('\n')}\n\nWhat should be the next steps or considerations?`;
+            const prompt = `Given the following events and dependencies:\n\nEvents:\n${vignetteJSON.consequences.join('\n')}\n\nDependencies:\n${vignetteJSON.dependencies.join('\n')}\n\nWhat should be the next steps or considerations?`;
             
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {

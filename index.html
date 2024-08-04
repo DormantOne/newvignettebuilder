@@ -29,14 +29,11 @@
     
     <div id="json-container" class="hidden">
         <h2>Edit Vignette Details</h2>
-        <label for="mainText">Main Presentation:</label>
+        <div id="initialVignette"></div>
+        <label for="mainText">Starting Vignette:</label>
         <textarea id="mainText" rows="3"></textarea>
-        <label for="consequencesText">Consequences/Results/Uncovered Data:</label>
-        <textarea id="consequencesText" rows="5"></textarea>
-        <label for="dependenciesText">Dependencies:</label>
-        <textarea id="dependenciesText" rows="5"></textarea>
-        <label for="decisionsText">Decisions and Findings:</label>
-        <textarea id="decisionsText" rows="5"></textarea>
+        <div id="ifThenContainer"></div>
+        <button onclick="addIfThen()">Add IF... THEN</button>
         <button onclick="startVignette()">Start Vignette</button>
     </div>
     
@@ -51,16 +48,15 @@
     <script>
         let vignetteJSON = {
             main: "",
-            consequences: [],
-            dependencies: [],
-            decisions_and_findings: []
+            ifThenStatements: []
         };
         const encryptedApiKey = "U2FsdGVkX18tjJqgGvHJxbN/7ZbxOV0RKpgWlaHk8c7ajA3LMb6/I9/EcERfK68Uj44MnlHQvnMsrqi23pr7bAJLzdcQ0nXs1QVV7hxv//mNuhKsC2+vX3WQGeeh6jw3DUKFxa7CxpKunx+SoJz6fw==";
         let decryptedApiKey = null;
-        
+
         function submitVignette() {
             const vignette = document.getElementById('vignetteInput').value;
             vignetteJSON.main = vignette;
+            document.getElementById('initialVignette').innerText = vignette;
             document.getElementById('creation-container').classList.add('hidden');
             document.getElementById('password-container').classList.remove('hidden');
         }
@@ -81,8 +77,8 @@
         async function generateJsonWithOpenAI(apiKey, attempt, previousResponse = "", error = "") {
             const text = vignetteJSON.main;
             const prompt = attempt === 0 
-                ? `Break down the following vignette into a JSON structure with four parts: main presentation, consequences/results/uncovered data, dependencies, and decisions and findings. Ensure the response is only valid JSON and nothing else. Use the following format: {"main": "text", "consequences": ["consequence1", "consequence2"], "dependencies": ["dependency1", "dependency2"], "decisions_and_findings": ["decision1", "finding1"]}\n\nVignette:\n\n${text}`
-                : `The previous JSON response was invalid. Here is the response:\n\n${previousResponse}\n\nError: ${error}\n\nPlease provide a corrected and valid JSON structure using the following format: {"main": "text", "consequences": ["consequence1", "consequence2"], "dependencies": ["dependency1", "dependency2"], "decisions_and_findings": ["decision1", "finding1"]}`;
+                ? `Break down the following vignette into a JSON structure with an initial starting vignette and multiple "IF... THEN" statements. Ensure the response is only valid JSON and nothing else. Use the following format: {"main": "text", "ifThenStatements": [{"if": "condition", "then": "result"}, {"if": "another condition", "then": "another result"}]}\n\nVignette:\n\n${text}`
+                : `The previous JSON response was invalid. Here is the response:\n\n${previousResponse}\n\nError: ${error}\n\nPlease provide a corrected and valid JSON structure using the following format: {"main": "text", "ifThenStatements": [{"if": "condition", "then": "result"}, {"if": "another condition", "then": "another result"}]}`;
             
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -108,9 +104,9 @@
                 try {
                     vignetteJSON = JSON.parse(responseText);
                     document.getElementById('mainText').value = vignetteJSON.main;
-                    document.getElementById('consequencesText').value = vignetteJSON.consequences.join('\n');
-                    document.getElementById('dependenciesText').value = vignetteJSON.dependencies.join('\n');
-                    document.getElementById('decisionsText').value = vignetteJSON.decisions_and_findings.join('\n');
+                    vignetteJSON.ifThenStatements.forEach((statement, index) => {
+                        addIfThen(statement.if, statement.then, index === 0);
+                    });
                     document.getElementById('password-container').classList.add('hidden');
                     document.getElementById('json-container').classList.remove('hidden');
                 } catch (e) {
@@ -133,12 +129,30 @@
             }
         }
         
+        function addIfThen(ifText = "", thenText = "", initial = false) {
+            const container = document.getElementById('ifThenContainer');
+            const div = document.createElement('div');
+            div.className = 'if-then-box';
+            div.innerHTML = `
+                <label>IF:</label>
+                <textarea class="if-text" rows="2">${ifText}</textarea>
+                <label>THEN:</label>
+                <textarea class="then-text" rows="2">${thenText}</textarea>
+            `;
+            container.appendChild(div);
+
+            if (!initial) {
+                vignetteJSON.ifThenStatements.push({ if: ifText, then: thenText });
+            }
+        }
+
         function startVignette() {
             // Update vignetteJSON with edited values
             vignetteJSON.main = document.getElementById('mainText').value;
-            vignetteJSON.consequences = document.getElementById('consequencesText').value.split('\n').filter(Boolean);
-            vignetteJSON.dependencies = document.getElementById('dependenciesText').value.split('\n').filter(Boolean);
-            vignetteJSON.decisions_and_findings = document.getElementById('decisionsText').value.split('\n').filter(Boolean);
+            vignetteJSON.ifThenStatements = Array.from(document.getElementsByClassName('if-then-box')).map(box => ({
+                if: box.getElementsByClassName('if-text')[0].value,
+                then: box.getElementsByClassName('then-text')[0].value
+            }));
             
             document.getElementById('json-container').classList.add('hidden');
             document.getElementById('vignette-container').classList.remove('hidden');
@@ -149,7 +163,7 @@
         function submitResponse() {
             const userInput = document.getElementById('userInput').value;
             if (userInput.trim()) {
-                vignetteJSON.consequences.push(userInput);
+                vignetteJSON.ifThenStatements.push({ if: "User input", then: userInput });
                 updateVignetteText(`<strong>User:</strong> ${userInput}`);
                 generateNextStep();
                 document.getElementById('userInput').value = '';
@@ -162,7 +176,7 @@
         }
         
         async function generateNextStep() {
-            const prompt = `Given the following events, dependencies, and decisions and findings:\n\nEvents:\n${vignetteJSON.consequences.join('\n')}\n\nDependencies:\n${vignetteJSON.dependencies.join('\n')}\n\nDecisions and Findings:\n${vignetteJSON.decisions_and_findings.join('\n')}\n\nWhat should be the next steps or considerations?`;
+            const prompt = `Given the following initial vignette and IF... THEN statements, what should be the next steps or considerations?\n\nInitial Vignette:\n${vignetteJSON.main}\n\nIF... THEN Statements:\n${vignetteJSON.ifThenStatements.map(statement => `IF ${statement.if} THEN ${statement.then}`).join('\n')}`;
             
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -184,7 +198,7 @@
                 const data = await response.json();
                 const responseText = data.choices[0].message.content.trim();
                 updateVignetteText(`<strong>AI:</strong> ${responseText}`);
-                vignetteJSON.decisions_and_findings.push(responseText);
+                vignetteJSON.ifThenStatements.push({ if: "AI response", then: responseText });
             } catch (error) {
                 console.error('Error:', error);
             }

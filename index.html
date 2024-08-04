@@ -92,9 +92,17 @@
                 });
                 
                 const data = await response.json();
-                const jsonResponse = JSON.parse(data.choices[0].message.content.trim());
-                vignetteJSON = jsonResponse;
-                document.getElementById('jsonOutput').textContent = JSON.stringify(jsonResponse, null, 2);
+                const responseText = data.choices[0].message.content.trim();
+
+                // Attempt to parse the response as JSON
+                try {
+                    vignetteJSON = JSON.parse(responseText);
+                    document.getElementById('jsonOutput').textContent = JSON.stringify(vignetteJSON, null, 2);
+                } catch (e) {
+                    console.error('Error parsing JSON response:', e);
+                    alert('The response from the AI could not be parsed as JSON.');
+                }
+
                 document.getElementById('password-container').classList.add('hidden');
                 document.getElementById('json-container').classList.remove('hidden');
             } catch (error) {

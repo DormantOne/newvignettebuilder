@@ -3,70 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vignette Builder with Encrypted API Key</title>
+    <title>Interactive Vignette</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; }
-        #input-container, #password-container, #json-container { margin: 20px; }
-        #input-container textarea, #password-container input, #json-container pre { width: 100%; }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #input-container, #json-container { margin-top: 20px; }
+        #input-container textarea, #json-container pre { width: 100%; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <div id="input-container">
-        <h2>Enter Vignette</h2>
-        <textarea id="vignetteInput" rows="10" placeholder="Enter your vignette here..."></textarea>
-        <button onclick="convertToJSON()">Convert to JSON</button>
+    <h1>Interactive Vignette</h1>
+    <div id="vignette-container">
+        <p id="vignette-text">Start your vignette here...</p>
+        <div id="input-container">
+            <textarea id="userInput" rows="3" placeholder="Enter your response..."></textarea>
+            <button onclick="submitResponse()">Submit Response</button>
+        </div>
     </div>
-
-    <div id="password-container" style="display:none;">
+    
+    <div id="password-container" class="hidden">
         <h2>Decrypt API Key</h2>
         <input type="password" id="password" placeholder="Enter password">
-        <button onclick="decryptApiKey()">Decrypt API Key and Generate JSON</button>
+        <button onclick="decryptApiKey()">Decrypt API Key and Start</button>
     </div>
 
-    <div id="json-container" style="display:none;">
+    <div id="json-container" class="hidden">
         <h2>Generated JSON</h2>
         <pre id="jsonOutput"></pre>
     </div>
 
     <script>
-        let vignetteJSON = {};
+        let vignetteJSON = {
+            events: [],
+            dependencies: [],
+            outcomes: []
+        };
         const encryptedApiKey = "U2FsdGVkX18tjJqgGvHJxbN/7ZbxOV0RKpgWlaHk8c7ajA3LMb6/I9/EcERfK68Uj44MnlHQvnMsrqi23pr7bAJLzdcQ0nXs1QVV7hxv//mNuhKsC2+vX3WQGeeh6jw3DUKFxa7CxpKunx+SoJz6fw==";  // Replace this with your new encrypted API key
+        let decryptedApiKey = null;
 
-        function convertToJSON() {
-            const vignette = document.getElementById('vignetteInput').value;
-            vignetteJSON = {
-                main: vignette,
-                dependencies: [],
-                outcomes: [],
-                points: 0
-            };
-            document.getElementById('password-container').style.display = 'block';
-        }
+        document.getElementById('password-container').classList.remove('hidden');
 
         function decryptApiKey() {
             const password = document.getElementById('password').value;
             const key = CryptoJS.SHA256(password).toString(CryptoJS.enc.Hex).slice(0, 32);
             const decryptedKeyBytes = CryptoJS.AES.decrypt(encryptedApiKey, key);
-            const decryptedKey = decryptedKeyBytes.toString(CryptoJS.enc.Utf8);
+            decryptedApiKey = decryptedKeyBytes.toString(CryptoJS.enc.Utf8);
 
-            if (decryptedKey) {
-                generateJsonWithOpenAI(decryptedKey);
+            if (decryptedApiKey) {
+                document.getElementById('password-container').classList.add('hidden');
+                document.getElementById('vignette-container').classList.remove('hidden');
             } else {
                 alert("Incorrect password.");
             }
         }
 
-        async function generateJsonWithOpenAI(apiKey) {
-            const text = vignetteJSON.main;
-            const prompt = `Create a JSON structure for the following vignette:\n\n${text}`;
-            
+        function submitResponse() {
+            const userInput = document.getElementById('userInput').value;
+            if (userInput.trim()) {
+                vignetteJSON.events.push(userInput);
+                updateVignetteText(userInput);
+                generateJsonWithOpenAI();
+                document.getElementById('userInput').value = '';
+            }
+        }
+
+        function updateVignetteText(userInput) {
+            const vignetteText = document.getElementById('vignette-text');
+            vignetteText.innerHTML += `<br><strong>User:</strong> ${userInput}`;
+        }
+
+        async function generateJsonWithOpenAI() {
+            const prompt = `Given the following events:\n\n${vignetteJSON.events.join('\n')}\n\nWhat should be the next steps or considerations?`;
+
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
+                        'Authorization': `Bearer ${decryptedApiKey}`
                     },
                     body: JSON.stringify({
                         model: 'gpt-3.5-turbo',
@@ -77,11 +92,11 @@
                         max_tokens: 1000
                     })
                 });
-                
+
                 const data = await response.json();
-                const jsonResponse = JSON.parse(data.choices[0].message.content.trim());
-                document.getElementById('jsonOutput').textContent = JSON.stringify(jsonResponse, null, 2);
-                document.getElementById('json-container').style.display = 'block';
+                const responseText = data.choices[0].message.content.trim();
+                updateVignetteText(responseText);
+                vignetteJSON.outcomes.push(responseText);
             } catch (error) {
                 console.error('Error:', error);
             }

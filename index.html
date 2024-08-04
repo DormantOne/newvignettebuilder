@@ -31,7 +31,7 @@
 
     <script>
         let vignetteJSON = {};
-        const encryptedApiKey = "iFxIUmsOaww4zKZzbPAJEEjpyixmR8sOimn6fcTOkZxIGj9wSnhcpwF4wSWgmhUlTSIj0rWOD5n5FfYDyOlqd2+NXmuD/m9VqUr2VOWJebaFE3dQlVw3fVz77ijQjq3kFk2ee1eYQeEVge0kPdP3KohJ3VEEHzKxrwXhEf+DDg==";  // Replace this with your new encrypted API key
+        const encryptedApiKey = "U2FsdGVkX18tjJqgGvHJxbN/7ZbxOV0RKpgWlaHk8c7ajA3LMb6/I9/EcERfK68Uj44MnlHQvnMsrqi23pr7bAJLzdcQ0nXs1QVV7hxv//mNuhKsC2+vX3WQGeeh6jw3DUKFxa7CxpKunx+SoJz6fw==";  // Replace this with your new encrypted API key
 
         function convertToJSON() {
             const vignette = document.getElementById('vignetteInput').value;
@@ -47,7 +47,8 @@
         function decryptApiKey() {
             const password = document.getElementById('password').value;
             const key = CryptoJS.SHA256(password).toString(CryptoJS.enc.Hex).slice(0, 32);
-            const decryptedKey = CryptoJS.AES.decrypt(encryptedApiKey, key).toString(CryptoJS.enc.Utf8);
+            const decryptedKeyBytes = CryptoJS.AES.decrypt(encryptedApiKey, key);
+            const decryptedKey = decryptedKeyBytes.toString(CryptoJS.enc.Utf8);
 
             if (decryptedKey) {
                 generateJsonWithOpenAI(decryptedKey);

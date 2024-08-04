@@ -31,7 +31,7 @@
 
     <script>
         let vignetteJSON = {};
-        const encryptedApiKey = "R2yh3srL8RXzelsQrF/CL81sbz5/rmp89ohfzKhIzl9lu/g+zYqsWYsuS6aiDOyLJY2qVbD06ZQ8iVgTm5Qc64JGvXDsfE9Id+olEiJpkTEONA8=";  // Replace this with your actual encrypted API key
+        const encryptedApiKey = "iFxIUmsOaww4zKZzbPAJEEjpyixmR8sOimn6fcTOkZxIGj9wSnhcpwF4wSWgmhUlTSIj0rWOD5n5FfYDyOlqd2+NXmuD/m9VqUr2VOWJebaFE3dQlVw3fVz77ijQjq3kFk2ee1eYQeEVge0kPdP3KohJ3VEEHzKxrwXhEf+DDg==";  // Replace this with your new encrypted API key
 
         function convertToJSON() {
             const vignette = document.getElementById('vignetteInput').value;
@@ -61,21 +61,24 @@
             const prompt = `Create a JSON structure for the following vignette:\n\n${text}`;
             
             try {
-                const response = await fetch('https://api.openai.com/v1/completions', {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${apiKey}`
                     },
                     body: JSON.stringify({
-                        model: 'text-davinci-003',
-                        prompt: prompt,
+                        model: 'gpt-3.5-turbo',
+                        messages: [
+                            {"role": "system", "content": "You are a helpful assistant."},
+                            {"role": "user", "content": prompt}
+                        ],
                         max_tokens: 1000
                     })
                 });
                 
                 const data = await response.json();
-                const jsonResponse = JSON.parse(data.choices[0].text.trim());
+                const jsonResponse = JSON.parse(data.choices[0].message.content.trim());
                 document.getElementById('jsonOutput').textContent = JSON.stringify(jsonResponse, null, 2);
                 document.getElementById('json-container').style.display = 'block';
             } catch (error) {

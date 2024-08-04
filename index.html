@@ -156,6 +156,10 @@
                 then: box.getElementsByClassName('then-text')[0].value
             }));
             
+            if (!vignetteJSON.conversation) {
+                vignetteJSON.conversation = [];
+            }
+
             document.getElementById('json-container').classList.add('hidden');
             document.getElementById('vignette-container').classList.remove('hidden');
             const initialEvent = vignetteJSON.main ? vignetteJSON.main : "Starting the vignette...";
@@ -166,6 +170,9 @@
         function submitResponse() {
             const userInput = document.getElementById('userInput').value;
             if (userInput.trim()) {
+                if (!vignetteJSON.conversation) {
+                    vignetteJSON.conversation = [];
+                }
                 vignetteJSON.conversation.push({ role: 'User', content: userInput });
                 updateVignetteText(`<strong>User:</strong> ${userInput}`);
                 generateNextStep();

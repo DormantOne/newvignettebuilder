@@ -49,7 +49,8 @@
     <script>
         let vignetteJSON = {
             main: "",
-            ifThenStatements: []
+            ifThenStatements: [],
+            conversation: []
         };
         const encryptedApiKey = "U2FsdGVkX18tjJqgGvHJxbN/7ZbxOV0RKpgWlaHk8c7ajA3LMb6/I9/EcERfK68Uj44MnlHQvnMsrqi23pr7bAJLzdcQ0nXs1QVV7hxv//mNuhKsC2+vX3WQGeeh6jw3DUKFxa7CxpKunx+SoJz6fw==";
         let decryptedApiKey = null;
@@ -159,12 +160,13 @@
             document.getElementById('vignette-container').classList.remove('hidden');
             const initialEvent = vignetteJSON.main ? vignetteJSON.main : "Starting the vignette...";
             document.getElementById('vignette-text').innerHTML = `<strong>AI:</strong> ${initialEvent}`;
+            vignetteJSON.conversation.push({ role: 'AI', content: initialEvent });
         }
         
         function submitResponse() {
             const userInput = document.getElementById('userInput').value;
             if (userInput.trim()) {
-                vignetteJSON.ifThenStatements.push({ if: "User input", then: userInput });
+                vignetteJSON.conversation.push({ role: 'User', content: userInput });
                 updateVignetteText(`<strong>User:</strong> ${userInput}`);
                 generateNextStep();
                 document.getElementById('userInput').value = '';
@@ -177,8 +179,9 @@
         }
         
         async function generateNextStep() {
-            const ifThenStatement = vignetteJSON.ifThenStatements.shift();
-            const prompt = `Based on the following IF... THEN statement, provide a succinct response (a few words only):\n\nIF ${ifThenStatement.if} THEN ${ifThenStatement.then}`;
+            const conversationHistory = vignetteJSON.conversation.map(entry => `${entry.role}: ${entry.content}`).join('\n');
+            const ifThenStatements = vignetteJSON.ifThenStatements.map(statement => `IF ${statement.if} THEN ${statement.then}`).join('\n');
+            const prompt = `Given the following conversation and IF... THEN statements, choose the best fit and provide a succinct response that makes sense and extends the vignette. If there is no matching IF... THEN statement, consider a reasonable possibility. Provide a succinct response (a few words only):\n\nConversation:\n${conversationHistory}\n\nIF... THEN Statements:\n${ifThenStatements}`;
             
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -200,14 +203,16 @@
                 const data = await response.json();
                 const responseText = data.choices[0].message.content.trim();
                 updateVignetteText(`<strong>AI:</strong> ${responseText}`);
-                vignetteJSON.ifThenStatements.push({ if: ifThenStatement.if, then: responseText });
+                vignetteJSON.conversation.push({ role: 'AI', content: responseText });
             } catch (error) {
                 console.error('Error:', error);
             }
         }
 
         async function analysis() {
-            const prompt = `Provide a comprehensive review of the following vignette and IF... THEN statements:\n\nInitial Vignette:\n${vignetteJSON.main}\n\nIF... THEN Statements:\n${vignetteJSON.ifThenStatements.map(statement => `IF ${statement.if} THEN ${statement.then}`).join('\n')}`;
+            const conversationHistory = vignetteJSON.conversation.map(entry => `${entry.role}: ${entry.content}`).join('\n');
+            const ifThenStatements = vignetteJSON.ifThenStatements.map(statement => `IF ${statement.if} THEN ${statement.then}`).join('\n');
+            const prompt = `Provide a comprehensive review of the following vignette, conversation, and IF... THEN statements:\n\nInitial Vignette:\n${vignetteJSON.main}\n\nConversation:\n${conversationHistory}\n\nIF... THEN Statements:\n${ifThenStatements}`;
             
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
